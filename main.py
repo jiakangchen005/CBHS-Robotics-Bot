@@ -39,5 +39,5 @@ async def load_extensions():
 
 # End of Bot
 
-client.run("MTAyMjk4NTc5MzA5NjEzODg5Mg.GClQ_W.Twn_s-UeN0MwFAYZZLOdgtMpoB1xWVT7-_60W4")
+client.run("bruh")
 
