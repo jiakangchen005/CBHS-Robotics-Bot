@@ -39,5 +39,10 @@ async def load_extensions():
 
 # End of Bot
 
-client.run("bruh")
+token = "haha, nice try"
+
+with open("../cbhs_robotics_bot_token", 'r') as file:
+    token = file.read()
+
+client.run(token)
 
