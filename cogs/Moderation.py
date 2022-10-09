@@ -26,12 +26,19 @@ class Moderation(commands.Cog):
 
 		result.set_thumbnail(url = member.display_avatar.url)
 
-		result.add_field(name = "Username", value = f"`{member}`", inline=False)
+		result.add_field(name = "Username", value = f"`{member}`", inline = False)
 
-		result.add_field(name="User ID", value = f"`{member.id}`", inline = False)
+		result.add_field(name = "Status", value = f"`{member.raw_status}`", inline = False)
+
+		if (len(member.activities) > 0):
+			result.add_field(name = "Activity(s)", value = f"`{member.activities[0].emoji} {member.activities[0].name}`", inline = False)
+		else:
+			result.add_field(name = "Activity(s)", value = "No Visible Activity", inline = False)
+
+		result.add_field(name = "User ID", value = f"`{member.id}`", inline = False)
 
 		join = member.created_at.strftime("%b %d, %Y")
-		result.add_field(name = "Account Creation Date", value=f"`{join}`", inline = False)
+		result.add_field(name = "Account Creation Date", value = f"`{join}`", inline = False)
 
 		await ctx.send(embed = result)
 

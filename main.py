@@ -9,8 +9,15 @@ client = commands.Bot(command_prefix = '>', intents = discord.Intents.all())
 
 @client.event
 async def on_ready():
-    status = discord.Activity(type = discord.ActivityType.listening, name = "you")
-    await client.change_presence(activity = status)
+    status = discord.Status.online
+    
+    # activity = discord.Activity(type = discord.ActivityType.watching, name = "you")
+
+    platform = "YouTube"
+    url = "https://www.youtube.com/watch?v=RQmEERvqq70"
+    activity = discord.Streaming(platform = platform, url = url, name = "to you")
+
+    await client.change_presence(status = status, activity = activity)
     print("yey")
 
 @client.event

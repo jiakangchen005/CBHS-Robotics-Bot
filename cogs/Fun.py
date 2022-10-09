@@ -10,7 +10,7 @@ class Fun(commands.Cog):
 		# bruh
 
 	@commands.command()
-	async def say(self, ctx, arg):
+	async def say(self, ctx, *, arg):
 		await ctx.send(arg)
 
 	@commands.command()
