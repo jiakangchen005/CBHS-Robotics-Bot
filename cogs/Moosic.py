@@ -1,18 +1,26 @@
 import discord
 from discord.ext import commands
 
+import asyncio
+
 import youtube_dl
 
-import urllib.request
-import urllib
+import requests
 import json
 
 class Moosic(commands.Cog):
+	FFMPEG_ARGS = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
+	YT_DL_ARGS = {"format": "bestaudio"}
+
 	playing = False
 
 	da_queue = []
 
 	temp = ""
+
+	current = ""
+
+	vc = None
 
 	def __init__(self, client):
 		self.client = client
@@ -23,16 +31,12 @@ class Moosic(commands.Cog):
 			await ctx.send("bruh, you're not even in a voice channel ;-;")
 			return
 
-		vc = ctx.author.voice.channel
+		user_vc = ctx.author.voice.channel
 
 		if ctx.voice_client is None:
-			await vc.connect()
+			await user_vc.connect()
 		else:
-			await ctx.send("i'm busy! :aqua_cry:")
-
-	@commands.command()
-	async def add(self, ctx, url):
-		self.da_queue.insert(0, url)
+			await ctx.send("i'm busy! \:aqua_cry:")
 
 	@commands.command()
 	async def disconnect(self, ctx):
@@ -41,48 +45,61 @@ class Moosic(commands.Cog):
 		else:
 			await ctx.voice_client.disconnect()
 
-	async def stream(self, ctx, url):
-		ctx.voice_client.stop()
+	async def play_next(self):
+		if len(self.da_queue) > 0:
+			self.current = self.da_queue.pop()
 
-		FFMPEG_ARGS = {"before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5", "options": "-vn"}
+			with youtube_dl.YoutubeDL(self.YT_DL_ARGS) as yt_dl:
+				info = yt_dl.extract_info(self.current, download = False)
+				source = await discord.FFmpegOpusAudio.from_probe(info["formats"][0]["url"], **self.FFMPEG_ARGS)
 
-		YT_DL_ARGS = {"format": "bestaudio"}
+				self.playing = True
 
-		vc = ctx.voice_client
+				self.vc.play(source, after = lambda e: asyncio.run(self.play_next()))
+		else:
+			self.playing = False
 
-		with youtube_dl.YoutubeDL(YT_DL_ARGS) as yt_dl:
-			info = yt_dl.extract_info(url, download = False)
-			url = info["formats"][0]["url"]
-			source = await discord.FFmpegOpusAudio.from_probe(url, **FFMPEG_ARGS)
+	async def play_audio(self, ctx):
+		with youtube_dl.YoutubeDL(self.YT_DL_ARGS) as yt_dl:
+			info = yt_dl.extract_info(self.current, download = False)
+			source = await discord.FFmpegOpusAudio.from_probe(info["formats"][0]["url"], **self.FFMPEG_ARGS)
 
 			self.playing = True
-			vc.play(source)
 
-	@commands.command()
-	async def play(self, ctx):
-		if self.playing == True:
-			await ctx.send("i'm already playing music \:beluga:")
-		else:
+			self.vc = ctx.voice_client
+
+			ctx.voice_client.play(source, after = lambda e: asyncio.run(self.play_next()))
+			
+	@commands.command(name = "play")
+	async def play(self, ctx, url):
+		self.da_queue.insert(0, url)
+
+		if not self.playing:
 			if ctx.voice_client is None:
 				await self.connect(ctx)
-			
-			if len(self.da_queue) == 0:
-				await ctx.send("there is nothing to play as the queue is empty \:kappa:")
+
+			if len(self.da_queue) > 0:
+				self.current = self.da_queue.pop()
+
+				await self.play_audio(ctx)
 			else:
-				await self.stream(ctx, self.da_queue.pop())
+				await ctx.send("there is nothing to play as the queue is empty \:kappa:")
 
 	async def get_yt_title(self, url):
-		parameters = {"format": "json", "url": url}
+		data_url = "https://www.youtube.com/oembed?format=json&url=" + url
 
-		data_url = "https://www.youtube.com/oembed?" + urllib.parse.urlencode(parameters)
+		response = requests.get(data_url)
+		html = response.text
+		data = json.loads(html)
 
-		with urllib.request.urlopen(data_url) as response:
-		    text = response.read()
-		    data = json.loads(text.decode())
-		    self.temp = str(data['title'])
+		self.temp = str(data['title'])
 			
 	@commands.command()
 	async def queue(self, ctx):
+		if len(self.da_queue) == 0:
+			await ctx.send("queue is empty :)")
+			return
+
 		result = discord.Embed(title = "Music Queue", description = "here's the upcoming sussy music", color = discord.Color.blue())		
 
 		await self.get_yt_title(self.da_queue[-1])
@@ -96,16 +113,13 @@ class Moosic(commands.Cog):
 
 		result.add_field(name = "Music", value = "`" + music_titles + "`", inline = False)
 
-		if len(self.da_queue) == 0:
-			await ctx.send("queue is empty :)")
-
 		await ctx.send(embed = result)
 
 	@commands.command()
 	async def stop(self, ctx):
 		if self.playing:
 			self.playing = False
-			await ctx.voice_client.stop()
+			ctx.voice_client.stop()
 			await ctx.send("bye! \:tips_fedora:")
 
 	@commands.command()
@@ -113,7 +127,7 @@ class Moosic(commands.Cog):
 		if self.playing:
 			self.playing = False
 
-			await ctx.voice_client.pause()
+			ctx.voice_client.pause()
 			await ctx.send("ok, i pause")
 		else:
 			await ctx.send("i'm not playing anything \:beluga:")
@@ -121,7 +135,9 @@ class Moosic(commands.Cog):
 	@commands.command()
 	async def resume(self, ctx):
 		if not self.playing:
-			await ctx.voice_client.resume()
+			self.playing = True
+
+			ctx.voice_client.resume()
 			await ctx.send("ok, i resume")
 
 async def setup(client):
