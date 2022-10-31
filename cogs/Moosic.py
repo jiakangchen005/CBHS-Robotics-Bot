@@ -20,7 +20,7 @@ class Moosic(commands.Cog):
 
 	current = ""
 
-	vc = None
+	ctx = None
 
 	def __init__(self, client):
 		self.client = client
@@ -36,7 +36,7 @@ class Moosic(commands.Cog):
 		if ctx.voice_client is None:
 			await user_vc.connect()
 		else:
-			await ctx.send("i'm busy! \:aqua_cry:")
+			await ctx.send("i'm busy! \\:aqua_cry:")
 
 	@commands.command()
 	async def disconnect(self, ctx):
@@ -47,26 +47,42 @@ class Moosic(commands.Cog):
 
 	async def play_next(self):
 		if len(self.da_queue) > 0:
+			self.context.voice_client.stop()
+
 			self.current = self.da_queue.pop()
 
 			with youtube_dl.YoutubeDL(self.YT_DL_ARGS) as yt_dl:
 				info = yt_dl.extract_info(self.current, download = False)
-				source = await discord.FFmpegOpusAudio.from_probe(info["formats"][0]["url"], **self.FFMPEG_ARGS)
+				info_url = info["formats"][0]["url"]
+				source = await discord.FFmpegOpusAudio.from_probe(info_url, **self.FFMPEG_ARGS)
 
 				self.playing = True
 
-				self.vc.play(source, after = lambda e: asyncio.run(self.play_next()))
+				await self.get_yt_title(self.current)
+				result = discord.Embed(title = "Now Playing", description = "`" + self.temp + "`", color = discord.Color.blue())		
+				
+				await self.context.send(embed = result)
+
+				self.context.voice_client.play(source, after = lambda e: asyncio.run(self.play_next()))
 		else:
 			self.playing = False
 
 	async def play_audio(self, ctx):
+		self.current = self.da_queue.pop()
+
 		with youtube_dl.YoutubeDL(self.YT_DL_ARGS) as yt_dl:
 			info = yt_dl.extract_info(self.current, download = False)
-			source = await discord.FFmpegOpusAudio.from_probe(info["formats"][0]["url"], **self.FFMPEG_ARGS)
+			info_url = info["formats"][0]["url"]
+			source = await discord.FFmpegOpusAudio.from_probe(info_url, **self.FFMPEG_ARGS)
 
 			self.playing = True
 
-			self.vc = ctx.voice_client
+			self.context = ctx
+
+			await self.get_yt_title(self.current)
+			result = discord.Embed(title = "Now Playing", description = "`" + self.temp + "`", color = discord.Color.blue())		
+			
+			await ctx.send(embed = result)
 
 			ctx.voice_client.play(source, after = lambda e: asyncio.run(self.play_next()))
 			
@@ -79,11 +95,9 @@ class Moosic(commands.Cog):
 				await self.connect(ctx)
 
 			if len(self.da_queue) > 0:
-				self.current = self.da_queue.pop()
-
 				await self.play_audio(ctx)
 			else:
-				await ctx.send("there is nothing to play as the queue is empty \:kappa:")
+				await ctx.send("there is nothing to play as the queue is empty \\:kappa:")
 
 	async def get_yt_title(self, url):
 		data_url = "https://www.youtube.com/oembed?format=json&url=" + url
@@ -102,6 +116,9 @@ class Moosic(commands.Cog):
 
 		result = discord.Embed(title = "Music Queue", description = "here's the upcoming sussy music", color = discord.Color.blue())		
 
+		await self.get_yt_title(self.current)
+		result.add_field(name = "Current Playing", value = "`" + self.temp + "`", inline = False)
+
 		await self.get_yt_title(self.da_queue[-1])
 
 		music_titles = "1) " + self.temp
@@ -111,7 +128,7 @@ class Moosic(commands.Cog):
 
 			music_titles = music_titles + "\n" + str(i) + ") " + self.temp
 
-		result.add_field(name = "Music", value = "`" + music_titles + "`", inline = False)
+		result.add_field(name = "Upcoming", value = "`" + music_titles + "`", inline = False)
 
 		await ctx.send(embed = result)
 
@@ -120,7 +137,7 @@ class Moosic(commands.Cog):
 		if self.playing:
 			self.playing = False
 			ctx.voice_client.stop()
-			await ctx.send("bye! \:tips_fedora:")
+			await ctx.send("bye! \\:tips_fedora:")
 
 	@commands.command()
 	async def pause(self, ctx):
@@ -130,7 +147,7 @@ class Moosic(commands.Cog):
 			ctx.voice_client.pause()
 			await ctx.send("ok, i pause")
 		else:
-			await ctx.send("i'm not playing anything \:beluga:")
+			await ctx.send("i'm not playing anything \\:beluga:")
 
 	@commands.command()
 	async def resume(self, ctx):
@@ -139,6 +156,15 @@ class Moosic(commands.Cog):
 
 			ctx.voice_client.resume()
 			await ctx.send("ok, i resume")
+
+	@commands.command()
+	async def skip(self, ctx):
+		if self.playing:
+			await ctx.send("ok, i skip")
+
+			ctx.voice_client.stop()
+
+			await self.play_audio(ctx)
 
 async def setup(client):
 	await client.add_cog(Moosic(client))

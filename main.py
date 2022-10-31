@@ -17,8 +17,12 @@ async def on_ready():
     # activity = discord.Activity(type = discord.ActivityType.watching, name = "you")
 
     platform = "YouTube"
-    url = "https://www.youtube.com/watch?v=Us2FjKZjvFI"
-    activity = discord.Streaming(platform = platform, url = url, name = "nakirium :)")
+    
+    url = "https://www.youtube.com/watch?v=o2ZrdsehHmI"
+    activity = discord.Streaming(platform = platform, url = url, name = "into the night ~")
+
+    # url = "https://www.youtube.com/watch?v=Us2FjKZjvFI"
+    # activity = discord.Streaming(platform = platform, url = url, name = "nakirium :)")
 
     await client.change_presence(status = status, activity = activity)
     print("yey")
