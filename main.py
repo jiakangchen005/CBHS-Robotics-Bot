@@ -6,6 +6,10 @@ import os
 
 from cogs import Fun, Moderation, Moosic, Robotics
 
+import threading
+
+import time
+
 client = commands.Bot(command_prefix = '>', intents = discord.Intents.all())
 
 # Start of Bot
@@ -19,13 +23,18 @@ async def on_ready():
     platform = "YouTube"
     
     url = "https://www.youtube.com/watch?v=o2ZrdsehHmI"
-    activity = discord.Streaming(platform = platform, url = url, name = "into the night ~")
+    activity = discord.Streaming(platform = platform, url = url, name = "my depair into the night")
 
     # url = "https://www.youtube.com/watch?v=Us2FjKZjvFI"
     # activity = discord.Streaming(platform = platform, url = url, name = "nakirium :)")
 
     await client.change_presence(status = status, activity = activity)
     print("yey")
+
+    # while True:
+    #     message = input("> ")
+    #     channel = client.get_channel(1023064911938600981)
+    #     await channel.send(message)
 
 async def load():
     for file in os.listdir("./cogs"):
